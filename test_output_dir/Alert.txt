@@ -70,3 +70,14 @@ Patient ID: 12, Timestamp: 1746822190415, Label: Alert, Data: triggered
 Patient ID: 1, Timestamp: 1746823870157, Label: Alert, Data: triggered
 Patient ID: 37, Timestamp: 1746823871127, Label: Alert, Data: triggered
 Patient ID: 8, Timestamp: 1746823871158, Label: Alert, Data: triggered
+Patient ID: 50, Timestamp: 1791239032346, Label: Alert, Data: triggered
+Patient ID: 39, Timestamp: 1791239033329, Label: Alert, Data: triggered
+Patient ID: 19, Timestamp: 1791239147829, Label: Alert, Data: triggered
+Patient ID: 44, Timestamp: 1791239148828, Label: Alert, Data: triggered
+Patient ID: 29, Timestamp: 1791239148828, Label: Alert, Data: triggered
+Patient ID: 43, Timestamp: 1791239149746, Label: Alert, Data: triggered
+Patient ID: 50, Timestamp: 1791239149756, Label: Alert, Data: triggered
+Patient ID: 23, Timestamp: 1791239149757, Label: Alert, Data: triggered
+Patient ID: 31, Timestamp: 1791239150748, Label: Alert, Data: triggered
+Patient ID: 34, Timestamp: 1791239150775, Label: Alert, Data: triggered
+Patient ID: 3, Timestamp: 1791239150822, Label: Alert, Data: triggered
