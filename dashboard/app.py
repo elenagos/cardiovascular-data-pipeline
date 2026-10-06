@@ -1097,7 +1097,7 @@ overview_tab, signals_tab, lab_tab = st.tabs(
     [
         "Overview",
         "Signals",
-        "Laboratory"
+        "Blood analysis"
     ]
 )
 
