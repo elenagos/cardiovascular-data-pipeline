@@ -1,7 +1,7 @@
-## Members 
-Student ID: i6397975
-Student ID: i6401819
-
+Originally developed as a university team project.
+This repository contains my extensions: 
+ analytics pipeline, database integration,
+dashboard, automated testing and deployment setup.
 
 # Cardio Data Simulator
 
@@ -24,25 +24,6 @@ The Cardio Data Simulator is a Java-based application designed to simulate real-
 - Java JDK 11 or newer.
 - Maven for managing dependencies and compiling the application.
 
-### Installation
-
-1. Clone the repository:
-
-   ```sh
-   git clone https://github.com/tpepels/signal_project.git
-   ```
-
-2. Navigate to the project directory:
-
-   ```sh
-   cd signal_project
-   ```
-
-3. Compile and package the application using Maven:
-   ```sh
-   mvn clean package
-   ```
-   This step compiles the source code and packages the application into an executable JAR file located in the `target/` directory.
 
 ### Running the Simulator
 
