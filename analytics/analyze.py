@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import pandas as pd
 from sqlalchemy import create_engine
 
@@ -148,7 +149,7 @@ saturation_anomalies.to_csv(
     "analytics/saturation_anomalies.csv",
     index=False
 )
-import matplotlib.pyplot as plt
+
 
 for patient_id, patient_data in heart_rate.groupby("patient_id"):
 
