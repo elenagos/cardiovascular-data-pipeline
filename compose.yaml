@@ -1,0 +1,92 @@
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: cardiopulse-postgres
+
+    environment:
+      POSTGRES_DB: cardio_pipeline
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d cardio_pipeline"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: cardiopulse-api
+
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/cardio_pipeline
+
+    command:
+      [
+        "uv",
+        "run",
+        "uvicorn",
+        "api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ]
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: cardiopulse-dashboard
+
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/cardio_pipeline
+
+    command:
+      [
+        "uv",
+        "run",
+        "streamlit",
+        "run",
+        "dashboard/app.py",
+        "--server.address",
+        "0.0.0.0",
+        "--server.port",
+        "8501"
+      ]
+
+    ports:
+      - "8501:8501"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+volumes:
+  postgres_data:
