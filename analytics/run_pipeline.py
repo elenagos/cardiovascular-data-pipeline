@@ -18,6 +18,14 @@ PROJECT_ROOT = (
 PIPELINE_STEPS = [
     {
         "name":
+            "Data quality",
+
+        "script":
+            "analytics/data_quality.py",
+    },
+
+    {
+        "name":
             "Rolling statistics",
 
         "script":
@@ -99,25 +107,20 @@ def print_header():
 
 
 def validate_scripts():
-
     missing_scripts = []
 
     for step in PIPELINE_STEPS:
-
         script_path = (
                 PROJECT_ROOT
                 / step["script"]
         )
 
         if not script_path.exists():
-
             missing_scripts.append(
                 str(script_path)
             )
 
-
     if missing_scripts:
-
         print(
             "Pipeline cannot start."
         )
@@ -127,13 +130,11 @@ def validate_scripts():
         )
 
         for script in missing_scripts:
-
             print(
                 f" - {script}"
             )
 
         return False
-
 
     return True
 
@@ -143,14 +144,12 @@ def run_step(
         total_steps,
         step,
 ):
-
     name = step["name"]
 
     script_path = (
             PROJECT_ROOT
             / step["script"]
     )
-
 
     print()
     print("-" * 70)
@@ -168,33 +167,25 @@ def run_step(
     print("-" * 70)
     print()
 
-
     start_time = (
         time.perf_counter()
     )
 
-
     try:
-
         result = subprocess.run(
             [
                 sys.executable,
                 str(script_path),
             ],
-
             cwd=PROJECT_ROOT,
-
             check=False,
         )
 
-
     except Exception as error:
-
         elapsed = (
                 time.perf_counter()
                 - start_time
         )
-
 
         return {
             "name":
@@ -213,21 +204,15 @@ def run_step(
                 str(error),
         }
 
-
     elapsed = (
             time.perf_counter()
             - start_time
     )
 
-
     if result.returncode == 0:
-
         status = "OK"
-
     else:
-
         status = "FAILED"
-
 
     return {
         "name":
@@ -251,19 +236,16 @@ def print_summary(
         results,
         total_elapsed,
 ):
-
     print()
     print()
     print("=" * 70)
     print("PIPELINE EXECUTION SUMMARY")
     print("=" * 70)
 
-
     for index, result in enumerate(
             results,
             start=1,
     ):
-
         name = result["name"]
         status = result["status"]
         elapsed = result["elapsed"]
@@ -275,7 +257,6 @@ def print_summary(
             f"{elapsed:.2f} sec"
         )
 
-
     print("-" * 70)
 
     print(
@@ -283,16 +264,13 @@ def print_summary(
         f"{total_elapsed:.2f} sec"
     )
 
-
     failed_steps = [
         result
         for result in results
         if result["status"] != "OK"
     ]
 
-
     if failed_steps:
-
         print()
 
         print(
@@ -302,7 +280,6 @@ def print_summary(
         print()
 
         for result in failed_steps:
-
             print(
                 f"Failed step: "
                 f"{result['name']}"
@@ -314,25 +291,21 @@ def print_summary(
                     ]
                     is not None
             ):
-
                 print(
                     f"Return code: "
                     f"{result['return_code']}"
                 )
 
             if result["error"]:
-
                 print(
                     f"Error: "
                     f"{result['error']}"
                 )
 
     else:
-
         print(
             "Pipeline status: SUCCESS"
         )
-
 
     print("=" * 70)
     print()
@@ -343,47 +316,36 @@ def print_summary(
 # ============================================================
 
 def main():
-
     print_header()
 
-
     if not validate_scripts():
-
         sys.exit(1)
-
 
     pipeline_start = (
         time.perf_counter()
     )
 
-
     results = []
-
 
     total_steps = len(
         PIPELINE_STEPS
     )
 
-
     for index, step in enumerate(
             PIPELINE_STEPS,
             start=1,
     ):
-
         result = run_step(
             index,
             total_steps,
             step,
         )
 
-
         results.append(
             result
         )
 
-
         if result["status"] != "OK":
-
             print()
 
             print(
@@ -393,29 +355,23 @@ def main():
 
             break
 
-
     total_elapsed = (
             time.perf_counter()
             - pipeline_start
     )
-
 
     print_summary(
         results,
         total_elapsed,
     )
 
-
     pipeline_failed = any(
         result["status"] != "OK"
         for result in results
     )
 
-
     if pipeline_failed:
-
         sys.exit(1)
-
 
     sys.exit(0)
 

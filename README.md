@@ -387,3 +387,27 @@ The risk groups are deterministic analytics rules for synthetic data and are not
 
 ---
 
+
+
+## REST API
+
+Install dependencies with `uv sync --locked`, then run `make api`.
+Interactive OpenAPI documentation: http://127.0.0.1:8000/docs.
+
+`DATABASE_URL` defaults to `postgresql+psycopg2://localhost/cardio_pipeline`.
+Override it before starting the server, for example:
+
+```bash
+export DATABASE_URL='postgresql+psycopg2://localhost/cardio_pipeline'
+make api
+```
+
+- `GET /health`: process liveness (`{"status": "ok"}`); no database query.
+- `GET /patients`: distinct patient IDs from `measurements`, ordered by ID.
+- `GET /patients/{patient_id}/analytics`: joins existing pipeline results
+  (`patient_clusters`, `patient_anomalies`, `patient_pca`, `patient_features`).
+  Run the analytics pipeline first to create those tables. Missing individual
+  results are returned as null; unknown patients return 404; invalid IDs return 422.
+
+The API only reads data and does not create tables or run the pipeline.
+Run `make api-test` for API tests with a mocked database, or `make test` for all tests.

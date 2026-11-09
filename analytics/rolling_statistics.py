@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 from sqlalchemy import create_engine, text
 
@@ -5,8 +7,9 @@ from sqlalchemy import create_engine, text
 # CONFIGURATION
 # ============================================================
 
-DATABASE_URL = (
-    "postgresql+psycopg2://localhost/cardio_pipeline"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg2://localhost/cardio_pipeline",
 )
 
 
@@ -97,8 +100,12 @@ def load_measurements(engine):
 def clean_measurements(df):
     df = df.copy()
 
+    # PostgreSQL TIMESTAMPTZ values are timezone-aware.
+    # Normalize all timestamps to UTC so pandas can safely
+    # store and compare them as one datetime dtype.
     df["recorded_at"] = pd.to_datetime(
-        df["recorded_at"]
+        df["recorded_at"],
+        utc=True,
     )
 
     # Extract first numeric value from text.
@@ -232,7 +239,6 @@ def build_rolling_statistics(df):
             _patient_id,
             measurement_type,
     ), group in grouped:
-
         processed_group = (
             calculate_group_rolling_statistics(
                 group,
@@ -353,6 +359,7 @@ def print_summary(
     ].notna()
 
     print()
+
     print(
         "Rolling statistics summary"
     )

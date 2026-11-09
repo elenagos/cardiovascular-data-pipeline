@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -6,8 +8,9 @@ from sqlalchemy import create_engine, text
 # CONFIGURATION
 # ============================================================
 
-DATABASE_URL = (
-    "postgresql+psycopg2://localhost/cardio_pipeline"
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg2://localhost/cardio_pipeline",
 )
 
 
@@ -52,7 +55,7 @@ def load_rolling_statistics(engine):
 
     return pd.read_sql(
         query,
-        engine
+        engine,
     )
 
 
@@ -78,23 +81,23 @@ def calculate_z_scores(df):
 
     df.loc[
         valid_baseline,
-        "z_score"
+        "z_score",
     ] = (
             (
                     df.loc[
                         valid_baseline,
-                        "measurement_value"
+                        "measurement_value",
                     ]
                     -
                     df.loc[
                         valid_baseline,
-                        "rolling_mean"
+                        "rolling_mean",
                     ]
             )
             /
             df.loc[
                 valid_baseline,
-                "rolling_std"
+                "rolling_std",
             ]
     )
 
@@ -129,20 +132,20 @@ def classify_anomalies(df):
                 absolute_z
                 < HIGH_Z_THRESHOLD
         ),
-        "anomaly_level"
+        "anomaly_level",
     ] = "MEDIUM"
 
     df.loc[
         absolute_z
         >= HIGH_Z_THRESHOLD,
-        "anomaly_level"
+        "anomaly_level",
     ] = "HIGH"
 
     # Measurements without enough rolling history
     # cannot yet be evaluated statistically.
     df.loc[
         df["z_score"].isna(),
-        "anomaly_level"
+        "anomaly_level",
     ] = "INSUFFICIENT_HISTORY"
 
     df["is_anomaly"] = (
@@ -198,7 +201,7 @@ def build_zscore_analysis(df):
 
 def save_zscore_analysis(
         result,
-        engine
+        engine,
 ):
     with engine.begin() as connection:
         connection.execute(
@@ -212,7 +215,7 @@ def save_zscore_analysis(
         "zscore_analysis",
         engine,
         if_exists="append",
-        index=False
+        index=False,
     )
 
 
@@ -230,6 +233,7 @@ def print_summary(result):
     ]
 
     print()
+
     print(
         "Z-score anomaly detection summary"
     )
@@ -342,7 +346,7 @@ def main():
 
     save_zscore_analysis(
         result,
-        engine
+        engine,
     )
 
     print_summary(

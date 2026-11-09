@@ -30,3 +30,19 @@ dashboard:
 
 java-test:
 	mvn test
+
+.PHONY: api api-test
+
+api:
+	uv run uvicorn api.main:app --reload
+
+api-test:
+	uv run pytest tests/test_api.py -v
+integration-test:
+	uv run pytest -m integration -v
+
+unit-test:
+	uv run pytest -m "not integration" -v
+
+test-all:
+	uv run pytest -v

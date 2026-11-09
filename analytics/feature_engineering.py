@@ -150,10 +150,9 @@ def load_measurements(engine):
 # ============================================================
 
 def clean_measurements(df):
-    df = df.copy()
-
     df["recorded_at"] = pd.to_datetime(
-        df["recorded_at"]
+        df["recorded_at"],
+        utc=True,
     )
 
     numeric_text = (

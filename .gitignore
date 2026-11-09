@@ -59,3 +59,5 @@ hs_err_pid*
 /local/
 /.env
 /.env.local
+__pycache__/
+*.py[cod]

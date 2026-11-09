@@ -24,8 +24,8 @@ def test_pipeline_contains_expected_steps():
     assert "Cluster analysis" in names
 
 
-def test_pipeline_has_seven_steps():
-    assert len(PIPELINE_STEPS) == 7
+def test_pipeline_has_eight_steps():
+    assert len(PIPELINE_STEPS) == 8
 
 
 def test_pipeline_scripts_exist():

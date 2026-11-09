@@ -15,6 +15,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/init_mlflow.sql:/docker-entrypoint-initdb.d/init_mlflow.sql:ro
 
     healthcheck:
       test:
@@ -88,5 +89,71 @@ services:
         condition: service_healthy
 
 
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: cardiopulse-mlflow
+
+    command:
+      [
+        "uv",
+        "run",
+        "mlflow",
+        "server",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5000",
+        "--backend-store-uri",
+        "postgresql+psycopg2://postgres:postgres@postgres:5432/mlflow",
+        "--artifacts-destination",
+        "/mlflow-artifacts",
+        "--allowed-hosts",
+        "localhost:*,127.0.0.1:*,mlflow:5000"
+      ]
+
+    ports:
+      - "5001:5000"
+
+    volumes:
+      - mlflow_artifacts:/mlflow-artifacts
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  analytics:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: cardiopulse-analytics
+
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/cardio_pipeline
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+
+    command:
+      [
+        "uv",
+        "run",
+        "python",
+        "analytics/run_pipeline.py"
+      ]
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+
+    profiles:
+      - tools
+
+
 volumes:
   postgres_data:
+  mlflow_artifacts:
