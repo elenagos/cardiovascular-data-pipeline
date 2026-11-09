@@ -1,0 +1,11 @@
+feature,differentiation_score
+low_saturation_rate,2.4696386586333423
+saturation_std,2.406049005318549
+saturation_mean,2.378891180016066
+max_abs_zscore,1.7855267168867415
+high_zscore_count,1.5583485698941777
+diastolicpressure_mean,1.093001810968877
+zscore_anomaly_rate,0.5672959129156252
+systolicpressure_mean,0.48421107508481936
+abnormal_systolic_rate,0.0
+abnormal_diastolic_rate,0.0

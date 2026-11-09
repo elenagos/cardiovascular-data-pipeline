@@ -1,158 +1,245 @@
 package com.cardio_generator.outputs;
 
-
+import com.cardiopipeline.consumer.MeasurementConsumer;
+import com.cardiopipeline.model.CardioMeasurement;
+import com.cardiopipeline.streaming.MeasurementJsonMapper;
 import com.data_management.DataStorage;
+
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+
 import java.net.URI;
 import java.util.Timer;
 import java.util.TimerTask;
+
 /**
- * A WebSocket client implementation receives&processes real time health data.
- * When a client connects to a WebSocket server, he receives patient data messages, stores them in DataStorage,
- * and in case of errors handles them with reconnection attempts
+ * WebSocket client that receives real-time cardiovascular data.
  *
- * <p>The expected message format is: "patientId,timestamp,label,measurement" where:
- * <ul>
- *   <li>patientId - integer identifier of the patient</li>
- *   <li>timestamp - long value representing measurement time in milliseconds</li>
- *   <li>label - string describing the measurement type (e.g., "HeartRate")</li>
- *   <li>measurement - double value of the actual measurement</li>
- * </ul>
+ * Preferred pipeline:
  *
- * <p>Key features:
- * <ul>
- *   <li>Automatic reconnection with 5-second delay on connection loss</li>
- *   <li>Thread-safe reconnection mechanism</li>
- *   <li>Data validation and error logging</li>
- *   <li>Integration with DataStorage for persistent data management</li>
- * </ul>
+ * WebSocket
+ * -> MeasurementConsumer
+ * -> MeasurementValidator
+ * -> MeasurementRepository
+ * -> PostgreSQL
+ *
+ * A legacy DataStorage constructor is kept temporarily so older
+ * tests and code can continue to compile during migration.
  */
 public class HealthDataWebSocketClient extends WebSocketClient {
 
-    private final DataStorage dataStorage;
+    private static final int RECONNECT_DELAY_MS = 5000;
+
     private final URI serverUri;
-    private static final int reconnectDelay = 5000; // = 5 seconds
+    private final MeasurementConsumer consumer;
+    private final DataStorage dataStorage;
+
+    private final MeasurementJsonMapper jsonMapper =
+            new MeasurementJsonMapper();
+
     private boolean reconnecting = false;
 
     /**
-     * Constructs a new WebSocket client for health data.
+     * Constructor for the new PostgreSQL pipeline.
      *
-     * @param serverUri the WebSocket server URI (e.g., "ws://localhost:8080/data")
-     * @param storage the DataStorage instance where received data will be persisted
+     * @param serverUri WebSocket server URI
+     * @param consumer consumer responsible for parsing,
+     *                 validating and storing measurements
      */
-    public HealthDataWebSocketClient(URI serverUri, DataStorage storage) {
+    public HealthDataWebSocketClient(
+            URI serverUri,
+            MeasurementConsumer consumer
+    ) {
         super(serverUri);
+
+        this.serverUri = serverUri;
+        this.consumer = consumer;
+        this.dataStorage = null;
+    }
+
+    /**
+     * Legacy constructor kept for compatibility with existing code/tests.
+     *
+     * @param serverUri WebSocket server URI
+     * @param storage legacy DataStorage instance
+     */
+    public HealthDataWebSocketClient(
+            URI serverUri,
+            DataStorage storage
+    ) {
+        super(serverUri);
+
         this.serverUri = serverUri;
         this.dataStorage = storage;
+        this.consumer = null;
     }
-    /**
-     * Called when the WebSocket connection is successfully established.
-     * Resets the reconnection flag and logs the connection status.
-     *
-     * @param handshakedata the server handshake data
-     */
+
     @Override
-    public void onOpen(ServerHandshake handshakedata) {
-        System.out.println("Connected to WebSocket server");
+    public void onOpen(ServerHandshake handshakeData) {
+        System.out.println(
+                "Connected to WebSocket server: " + serverUri
+        );
+
         reconnecting = false;
     }
+
     /**
-     * Processes incoming WebSocket messages containing health data.
-     * Parses messages in format "patientId,timestamp,label,measurement" and stores them.
-     *
-     * <p>Error handling:
-     * <ul>
-     *   <li>Logs invalid message formats</li>
-     *   <li>Catches and logs parsing errors</li>
-     *   <li>Prints stack traces for debugging</li>
-     * </ul>
-     *
-     * @param message the raw message received from WebSocket
+     * Processes incoming JSON messages.
      */
     @Override
     public void onMessage(String message) {
-        // Here we convert and store parsed data(patientIds, timestamp, labels and measurements
-        // Each part is parsed into its appropriate data type
-        //Then after successful parsing the data is passed to the DataStorage instance
+
         try {
-            String[] parts = message.split(",", 4);
-            if (parts.length != 4) {
-                System.err.println("Invalid message format: " + message);
+
+            /*
+             * New pipeline.
+             */
+            if (consumer != null) {
+
+                consumer.consume(message);
+
+                System.out.println(
+                        "Processed measurement: " + message
+                );
+
                 return;
             }
 
-            int patientId = Integer.parseInt(parts[0]);
-            long timestamp = Long.parseLong(parts[1]);
-            String label = parts[2];
-            double measurement = Double.parseDouble(parts[3]);
+            /*
+             * Legacy compatibility path.
+             */
+            if (dataStorage != null) {
 
-            // Store the data in the DataStorage instance
-            dataStorage.addPatientData(patientId, measurement, label, timestamp);
-            System.out.println("Stored: " + message);
+                CardioMeasurement measurement =
+                        jsonMapper.fromJson(message);
+
+                double numericValue =
+                        Double.parseDouble(
+                                measurement.getData()
+                        );
+
+                dataStorage.addPatientData(
+                        measurement.getPatientId(),
+                        numericValue,
+                        measurement.getType(),
+                        measurement
+                                .getTimestamp()
+                                .toEpochMilli()
+                );
+
+                System.out.println(
+                        "Stored measurement in legacy DataStorage: "
+                                + message
+                );
+            }
+
         } catch (Exception e) {
-            System.err.println("Failed to parse or store message: " + message);
+
+            System.err.println(
+                    "Failed to process WebSocket message: "
+                            + message
+            );
+
             e.printStackTrace();
         }
     }
-    /**
-     * Handles connection closure events.
-     * Triggers automatic reconnection after the specified delay.
-     *
-     * @param code the closure code
-     * @param reason the closure reason
-     * @param remote whether the closure was initiated by the remote host
-     */
-    //called when the connection is closed
+
     @Override
-    public void onClose(int code, String reason, boolean remote) {
-        System.out.println("Connection closed: " + reason);
+    public void onClose(
+            int code,
+            String reason,
+            boolean remote
+    ) {
+
+        System.out.println(
+                "Connection closed: " + reason
+        );
+
         attemptReconnect();
     }
-    /**
-     * Handles WebSocket communication errors.
-     * Logs the error and initiates reconnection.
-     *
-     * @param ex the exception that occurred
-     */
-    //called when an error occurs(for example if the message does not have exactly 4 "parts", an error is logged and we skip the message)
+
     @Override
-    public void onError(Exception ex) {
-        System.err.println("WebSocket error:");
-        ex.printStackTrace();
+    public void onError(Exception exception) {
+
+        System.err.println(
+                "WebSocket error: "
+                        + exception.getMessage()
+        );
+
         attemptReconnect();
     }
+
     /**
-     * Manages reconnection logic with thread-safe protection against duplicate attempts.
-     * Creates a new client instance after the delay period.
-     *
-     * <p>Features:
-     * <ul>
-     *   <li>Synchronized reconnection flag prevents multiple attempts</li>
-     *   <li>Uses TimerTask for delayed execution</li>
-     *   <li>Creates new client instances to avoid issues with connection state </li>
-     * </ul>
+     * Schedules a reconnect attempt.
      */
-    //called when the connection is opened
-    private void attemptReconnect() {
-        if (reconnecting) return;
+    private synchronized void attemptReconnect() {
+
+        if (reconnecting) {
+            return;
+        }
 
         reconnecting = true;
-        System.out.println("Attempting to reconnect in " + (reconnectDelay / 1000) + " seconds...");
 
-        // Schedules a reconnection attempt after the specified delay time
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    HealthDataWebSocketClient newClient = new HealthDataWebSocketClient(serverUri, dataStorage);
-                    newClient.connect();
-                } catch (Exception e) {
-                    System.err.println("Failed to reconnect:");
-                    e.printStackTrace();
-                    reconnecting = false;
-                }
+        System.out.println(
+                "Attempting to reconnect in "
+                        + (RECONNECT_DELAY_MS / 1000)
+                        + " seconds..."
+        );
+
+        Timer timer = new Timer(true);
+
+        timer.schedule(
+                new TimerTask() {
+
+                    @Override
+                    public void run() {
+                        performReconnect();
+                    }
+
+                },
+                RECONNECT_DELAY_MS
+        );
+    }
+
+    /**
+     * Creates a fresh client instance and reconnects.
+     *
+     * This method intentionally has a different name from
+     * WebSocketClient.reconnect().
+     */
+    private void performReconnect() {
+
+        try {
+
+            HealthDataWebSocketClient newClient;
+
+            if (consumer != null) {
+
+                newClient =
+                        new HealthDataWebSocketClient(
+                                serverUri,
+                                consumer
+                        );
+
+            } else {
+
+                newClient =
+                        new HealthDataWebSocketClient(
+                                serverUri,
+                                dataStorage
+                        );
             }
-        }, reconnectDelay);
+
+            newClient.connect();
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Failed to reconnect: "
+                            + e.getMessage()
+            );
+
+            reconnecting = false;
+        }
     }
 }

@@ -1,0 +1,21 @@
+{
+  "model_type": "IsolationForest",
+  "features": [
+    "saturation_mean",
+    "saturation_std",
+    "systolicpressure_mean",
+    "diastolicpressure_mean",
+    "low_saturation_rate",
+    "abnormal_systolic_rate",
+    "abnormal_diastolic_rate",
+    "zscore_anomaly_rate",
+    "high_zscore_count",
+    "max_abs_zscore"
+  ],
+  "contamination": 0.1,
+  "random_state": 42,
+  "n_estimators": 300,
+  "patient_count": 20,
+  "registered_model_name": "CardioPulseIsolationForest",
+  "trained_at": "2026-10-29T21:38:19.416367+00:00"
+}
